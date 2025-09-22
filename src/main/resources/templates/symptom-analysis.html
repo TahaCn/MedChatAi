@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semptom Analizi - MedChatAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+        }
+        .user-message {
+            text-align: right;
+        }
+        .user-message .message-content {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 18px;
+            display: inline-block;
+            max-width: 70%;
+        }
+        .ai-message .message-content {
+            background-color: white;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 18px;
+            display: inline-block;
+            max-width: 70%;
+            border: 1px solid #dee2e6;
+        }
+        .hospital-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        .loading {
+            opacity: 0.7;
+        }
+        .emergency-warning {
+            background-color: #dc3545;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="/dashboard">
+            <strong>MedChatAI</strong>
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="/dashboard">Ana Sayfa</a>
+            <a class="nav-link" href="/logout">Çıkış Yap</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Semptom Analizi</h4>
+                    <small>Yaşadığınız semptomları detaylı bir şekilde anlatın</small>
+                </div>
+                <div class="card-body">
+                    <!-- Chat Container -->
+                    <div id="chatContainer" class="chat-container mb-3">
+                        <div class="text-center text-muted">
+                            <p>Semptomlarınızı anlatmaya başlayın...</p>
+                        </div>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form id="symptomForm">
+                        <div class="input-group">
+                            <textarea id="symptomInput" class="form-control" rows="3"
+                                      placeholder="Semptomlarınızı detaylı bir şekilde yazın..." required></textarea>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Gönder
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                            <strong>Uyarı:</strong> Bu analiz sadece bilgilendirme amaçlıdır. Kesin tanı için mutlaka bir doktora başvurun.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hospital Alert Modal -->
+<div class="modal fade" id="hospitalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Acil Durum - Hastane Önerisi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>⚠️ Acil Durum Tespit Edildi!</strong><br>
+                    Belirtileriniz acil tıbbi müdahale gerektirebilir. Lütfen derhal en yakın hastaneye başvurun veya 112'yi arayın.
+                </div>
+                <div id="hospitalList">
+                    <p><strong>Acil Durum Numaraları:</strong></p>
+                    <ul>
+                        <li>🚨 Acil Servis: 112</li>
+                        <li>🏥 Sağlık Bakanlığı ALO: 184</li>
+                        <li>🚑 İtfaiye: 110</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
+<script>
+    let sessionId = '';
+
+    document.getElementById('symptomForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const symptomInput = document.getElementById('symptomInput');
+        const symptomText = symptomInput.value.trim();
+
+        if (!symptomText) return;
+
+        // Add user message to chat
+        addMessage(symptomText, 'user');
+        symptomInput.value = '';
+
+        // Show loading
+        const loadingId = addMessage('Analiz ediliyor...', 'ai', true);
+
+        try {
+            const response = await fetch('/api/diagnose', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: symptomText,
+                    sessionId: sessionId
+                })
+            });
+
+            const result = await response.json();
+
+            // Remove loading message
+            removeMessage(loadingId);
+
+            if (result) {
+                // Add AI response
+                addMessage(result.analysis || 'Analiz tamamlandı.', 'ai');
+
+                // Check for emergency
+                if (result.emergencyLevel && result.emergencyLevel === 'HIGH') {
+                    showEmergencyAlert();
+                }
+
+                // Update session ID if provided
+                if (result.sessionId) {
+                    sessionId = result.sessionId;
+                }
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            removeMessage(loadingId);
+            addMessage('Üzgünüm, analiz sırasında bir hata oluştu. Lütfen tekrar deneyin.', 'ai');
+        }
+    });
+
+    function addMessage(text, sender, isLoading = false) {
+        const chatContainer = document.getElementById('chatContainer');
+        const messageId = 'msg_' + Date.now();
+
+        const messageDiv = document.createElement('div');
+        messageDiv.id = messageId;
+        messageDiv.className = `message ${sender}-message`;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = `message-content ${isLoading ? 'loading' : ''}`;
+        contentDiv.innerHTML = text;
+
+        messageDiv.appendChild(contentDiv);
+        chatContainer.appendChild(messageDiv);
+
+        // Scroll to bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        return messageId;
+    }
+
+    function removeMessage(messageId) {
+        const message = document.getElementById(messageId);
+        if (message) {
+            message.remove();
+        }
+    }
+
+    function showEmergencyAlert() {
+        const modal = new bootstrap.Modal(document.getElementById('hospitalModal'));
+        modal.show();
+    }
+
+    // Clear initial message when first user message is sent
+    let isFirstMessage = true;
+    document.getElementById('symptomInput').addEventListener('input', function() {
+        if (isFirstMessage && this.value.trim()) {
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            isFirstMessage = false;
+        }
+    });
+</script>
+</body>
+</html>

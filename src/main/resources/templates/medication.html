@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İlaç Danışmanlığı - MedChatAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .service-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .service-card:hover {
+            border-color: #ffc107;
+            transform: translateY(-3px);
+        }
+        .service-card.active {
+            border-color: #ffc107;
+            background-color: #fff3cd;
+        }
+        .result-container {
+            min-height: 200px;
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-warning">
+    <div class="container">
+        <a class="navbar-brand text-dark" href="/dashboard">
+            <strong>MedChatAI</strong>
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link text-dark" href="/dashboard">Ana Sayfa</a>
+            <a class="nav-link text-dark" href="/logout">Çıkış Yap</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Service Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-pills text-warning"></i> İlaç Danışmanlığı
+            </h2>
+            <p class="text-center text-muted">Hangi hizmeti kullanmak istiyorsunuz?</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- İlaç Etkileşimi -->
+        <div class="col-md-6 mb-3">
+            <div class="card service-card" id="interactionCard" onclick="selectService('interaction')">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5>İlaç Etkileşim Kontrolü</h5>
+                    <p class="text-muted">İki ilaç arasındaki etkileşimi kontrol edin</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- İlaç Bilgisi -->
+        <div class="col-md-6 mb-3">
+            <div class="card service-card" id="infoCard" onclick="selectService('info')">
+                <div class="card-body text-center">
+                    <i class="fas fa-info-circle fa-3x text-info mb-3"></i>
+                    <h5>İlaç Bilgi Sorgulama</h5>
+                    <p class="text-muted">İlaç hakkında detaylı bilgi alın</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İlaç Etkileşim Formu -->
+    <div class="row" id="interactionSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0 text-dark">
+                        <i class="fas fa-exclamation-triangle me-2"></i>İlaç Etkileşim Kontrolü
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="interactionForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="medication1" class="form-label">İlaç 1</label>
+                                    <input type="text" class="form-control" id="medication1" placeholder="İlk ilacın adını girin..." required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="medication2" class="form-label">İlaç 2</label>
+                                    <input type="text" class="form-control" id="medication2" placeholder="İkinci ilacın adını girin..." required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-search"></i> Etkileşimi Kontrol Et
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İlaç Bilgi Formu -->
+    <div class="row" id="infoSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>İlaç Bilgi Sorgulama
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="infoForm">
+                        <div class="mb-3">
+                            <label for="medicationName" class="form-label">İlaç Adı</label>
+                            <input type="text" class="form-control" id="medicationName" placeholder="İlaç adını girin..." required>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-info">
+                                <i class="fas fa-search"></i> İlaç Bilgilerini Getir
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sonuç Alanı -->
+    <div class="row mt-4" id="resultSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Sonuç</h5>
+                </div>
+                <div class="card-body">
+                    <div id="resultContainer" class="result-container">
+                        <!-- Sonuçlar burada gösterilecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Uyarı -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Önemli Uyarı:</strong> Bu bilgiler sadece eğitim amaçlıdır. İlaç kullanımı konusunda mutlaka doktorunuza veya eczacınıza danışın.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js"></script>
+<script>
+    let currentService = '';
+
+    function selectService(service) {
+        // Reset cards
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.classList.remove('active');
+        });
+
+        // Hide all sections
+        document.getElementById('interactionSection').style.display = 'none';
+        document.getElementById('infoSection').style.display = 'none';
+        document.getElementById('resultSection').style.display = 'none';
+
+        // Activate selected service
+        currentService = service;
+
+        if (service === 'interaction') {
+            document.getElementById('interactionCard').classList.add('active');
+            document.getElementById('interactionSection').style.display = 'block';
+        } else if (service === 'info') {
+            document.getElementById('infoCard').classList.add('active');
+            document.getElementById('infoSection').style.display = 'block';
+        }
+    }
+
+    // İlaç Etkileşim Formu
+    document.getElementById('interactionForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const med1 = document.getElementById('medication1').value.trim();
+        const med2 = document.getElementById('medication2').value.trim();
+
+        if (!med1 || !med2) {
+            alert('Lütfen her iki ilaç adını da girin.');
+            return;
+        }
+
+        showLoading('İlaç etkileşimi kontrol ediliyor...');
+
+        try {
+            const formData = new FormData();
+            formData.append('medication1', med1);
+            formData.append('medication2', med2);
+
+            const response = await fetch('/api/medicine/interaction', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log('API Response:', data); // Debug için
+
+            if (data.success && data.data) {
+                // MedicineInteractionResult objesini formatla
+                const result = data.data;
+                let formattedResult = `🔍 İlaç Etkileşim Analizi\n\n`;
+                formattedResult += `📋 İlaçlar: ${med1} ↔ ${med2}\n\n`;
+
+                if (result.hasInteraction) {
+                    formattedResult += `⚠️ ETKİLEŞİM TESPİT EDİLDİ\n`;
+                    formattedResult += `🔸 Ciddiyet: ${result.severity || result.interactionSeverity || 'Bilinmiyor'}\n\n`;
+
+                    if (result.mechanism) {
+                        formattedResult += `🔬 Etkileşim Mekanizması:\n${result.mechanism}\n\n`;
+                    }
+
+                    if (result.symptoms && result.symptoms.length > 0) {
+                        formattedResult += `🔸 Olası Belirtiler:\n`;
+                        result.symptoms.forEach(symptom => formattedResult += `• ${symptom}\n`);
+                        formattedResult += `\n`;
+                    }
+
+                    if (result.riskGroups && result.riskGroups.length > 0) {
+                        formattedResult += `👥 Risk Grupları:\n`;
+                        result.riskGroups.forEach(group => formattedResult += `• ${group}\n`);
+                        formattedResult += `\n`;
+                    }
+
+                    if (result.recommendations && result.recommendations.length > 0) {
+                        formattedResult += `💡 Öneriler:\n`;
+                        result.recommendations.forEach(rec => formattedResult += `• ${rec}\n`);
+                        formattedResult += `\n`;
+                    }
+                } else {
+                    formattedResult += `✅ ETKİLEŞİM TESPİT EDİLMEDİ\n`;
+                    formattedResult += `Bu iki ilaç arasında bilinen ciddi bir etkileşim bulunmamaktadır.\n\n`;
+                }
+
+                if (result.disclaimer) {
+                    formattedResult += `⚠️ Uyarı: ${result.disclaimer}`;
+                } else {
+                    formattedResult += `⚠️ Uyarı: Bu analiz sadece bilgilendirme amaçlıdır. İlaç kullanımı konusunda mutlaka doktorunuza veya eczacınıza danışın.`;
+                }
+
+                showResult(formattedResult, result.hasInteraction ? 'warning' : 'success');
+            } else {
+                showResult(data.message || 'Bir hata oluştu. Lütfen tekrar deneyin.', 'danger');
+            }
+
+        } catch (error) {
+            console.error('Etkileşim kontrolü hatası:', error);
+            showResult('❌ Bağlantı sorunu yaşıyoruz. Lütfen tekrar deneyin. Acil durumlar için eczacınıza danışın.', 'danger');
+        }
+    });
+
+    // İlaç Bilgi Formu
+    document.getElementById('infoForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const medicineName = document.getElementById('medicationName').value.trim();
+
+        if (!medicineName) {
+            alert('Lütfen ilaç adını girin.');
+            return;
+        }
+
+        showLoading('İlaç bilgileri getiriliyor...');
+
+        try {
+            const formData = new FormData();
+            formData.append('medicineName', medicineName);
+
+            const response = await fetch('/api/medicine/info', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log('API Response:', data); // Debug için
+
+            if (data.success && data.data) {
+                // MedicineInfoResult objesini formatla
+                const result = data.data;
+                let formattedResult = `💊 İlaç Bilgi Raporu\n\n`;
+                formattedResult += `📋 İlaç Adı: ${result.medicineName || medicineName}\n\n`;
+
+                if (result.activeIngredient) {
+                    formattedResult += `🧪 Etken Madde: ${result.activeIngredient}\n\n`;
+                }
+
+                if (result.indications && result.indications.length > 0) {
+                    formattedResult += `🎯 Kullanım Alanları:\n`;
+                    result.indications.forEach(indication => formattedResult += `• ${indication}\n`);
+                    formattedResult += `\n`;
+                }
+
+                if (result.dosage) {
+                    formattedResult += `💊 Dozaj: ${result.dosage}\n\n`;
+                }
+
+                if (result.sideEffects && result.sideEffects.length > 0) {
+                    formattedResult += `⚠️ Yan Etkiler:\n`;
+                    result.sideEffects.forEach(effect => formattedResult += `• ${effect}\n`);
+                    formattedResult += `\n`;
+                }
+
+                if (result.contraindications && result.contraindications.length > 0) {
+                    formattedResult += `🚫 Kontrendikasyonlar:\n`;
+                    result.contraindications.forEach(contra => formattedResult += `• ${contra}\n`);
+                    formattedResult += `\n`;
+                }
+
+                if (result.warnings && result.warnings.length > 0) {
+                    formattedResult += `⚠️ Özel Uyarılar:\n`;
+                    result.warnings.forEach(warning => formattedResult += `• ${warning}\n`);
+                    formattedResult += `\n`;
+                }
+
+                if (result.disclaimer) {
+                    formattedResult += `📝 Uyarı: ${result.disclaimer}`;
+                } else {
+                    formattedResult += `📝 Uyarı: Bu bilgiler sadece eğitim amaçlıdır. İlaç kullanımı konusunda mutlaka doktorunuza veya eczacınıza danışın.`;
+                }
+
+                showResult(formattedResult, 'info');
+            } else {
+                showResult(data.message || 'Bir hata oluştu. Lütfen tekrar deneyin.', 'danger');
+            }
+
+        } catch (error) {
+            console.error('İlaç bilgi hatası:', error);
+            showResult('❌ Bağlantı sorunu yaşıyoruz. Lütfen tekrar deneyin. Acil durumlar için eczacınıza danışın.', 'danger');
+        }
+    });
+
+    function showLoading(message) {
+        const resultContainer = document.getElementById('resultContainer');
+        resultContainer.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        document.getElementById('resultSection').style.display = 'block';
+    }
+
+    function showResult(result, type = 'info') {
+        const resultContainer = document.getElementById('resultContainer');
+
+        let alertClass = 'alert-info';
+        let iconClass = 'fas fa-info-circle';
+
+        switch(type) {
+            case 'success':
+                alertClass = 'alert-success';
+                iconClass = 'fas fa-check-circle';
+                break;
+            case 'warning':
+                alertClass = 'alert-warning';
+                iconClass = 'fas fa-exclamation-triangle';
+                break;
+            case 'danger':
+                alertClass = 'alert-danger';
+                iconClass = 'fas fa-exclamation-circle';
+                break;
+        }
+
+        resultContainer.innerHTML = `
+                <div class="alert ${alertClass}" role="alert">
+                    <i class="${iconClass} mb-2"></i>
+                    <div class="result-content mt-2">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; background: none; border: none; padding: 0;">${result}</pre>
+                    </div>
+                </div>
+            `;
+        document.getElementById('resultSection').style.display = 'block';
+
+        // Sonuca scroll yap
+        document.getElementById('resultSection').scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+
+    // Sayfa yüklendiğinde ilk servisi varsayılan olarak seç
+    window.addEventListener('load', function() {
+        // URL'de hash varsa ona göre servis seç
+        const hash = window.location.hash.substring(1);
+        if (hash === 'interaction' || hash === 'info') {
+            selectService(hash);
+        }
+    });
+
+    // Enter tuşu ile form gönderme
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.target.id === 'medication1' || e.target.id === 'medication2')) {
+            e.preventDefault();
+            document.getElementById('interactionForm').dispatchEvent(new Event('submit'));
+        } else if (e.key === 'Enter' && e.target.id === 'medicationName') {
+            e.preventDefault();
+            document.getElementById('infoForm').dispatchEvent(new Event('submit'));
+        }
+    });
+</script>
+</body>
+</html>
