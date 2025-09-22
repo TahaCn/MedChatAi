@@ -66,7 +66,6 @@ public String diagnose(User user, String symptoms)
 - **İlaç Etkileşim Kontrolü**: İki veya daha fazla ilaç arasındaki etkileşimleri analiz eder
 - **İlaç Bilgi Sorgulama**: Detaylı ilaç monografisi ve kullanım bilgileri
 - **Kişiselleştirilmiş Uyarılar**: Kullanıcının sağlık profiline göre özel uyarılar
-- **Çoklu İlaç Analizi**: Birden fazla ilacın birlikte kullanımının güvenliği
 
 #### Kullanılan Metotlar:
 ```java
@@ -75,9 +74,6 @@ public MedicineInteractionResult checkInteractionStructured(User user, String me
 
 // İlaç bilgi sorgulama
 public MedicineInfoResult getMedicineInfoStructured(User user, String medicineName)
-
-// Çoklu ilaç etkileşim analizi
-public List<MedicineInteractionResult> checkMultipleInteractions(User user, List<String> medications)
 ```
 
 #### Özellikler:
